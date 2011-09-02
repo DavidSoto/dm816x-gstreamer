@@ -47,7 +47,7 @@ libgstomx_la_SOURCES = gstomx.c gstomx.h \
                gstomx_base_vfpc.c gstomx_base_vfpc.h \
                gstomx_base_ctrl.c gstomx_base_ctrl.h \
                gstomx_scaler.c gstomx_scaler.h   \
-               gstomx_noisefilter.c gstomx_noisefilter.h   
+               gstomx_noisefilter.c gstomx_noisefilter.h
 
 libgstomx_la_LIBADD = $(OMXCORE_LIBS) $(GST_LIBS) $(GST_BASE_LIBS) -lgstvideo-0.10 $(top_builddir)/util/libutil.la
 libgstomx_la_CFLAGS = $(OMXCORE_CFLAGS) $(OMXTIAUDIODEC_CFLAGS) $(USE_OMXTIAUDIODEC) $(GST_CFLAGS) $(GST_BASE_CFLAGS) -I$(top_srcdir)/util \
@@ -57,24 +57,11 @@ libgstomx_la_CFLAGS = $(OMXCORE_CFLAGS) $(OMXTIAUDIODEC_CFLAGS) $(USE_OMXTIAUDIO
     	-I$(XDC_INSTALL_DIR)/packages \
     	-I$(OMX_INSTALL_DIR)/include \
     	-I$(OMX_INSTALL_DIR)/packages/ti/omx/comp/ctrl \
-        -I${LINUX_INSTALL_DIR}/include -I${LINUX_INSTALL_DIR}/arch/arm/include
-        
+        -I$(KERNEL_INSTALL_DIR)/include -I$(KERNEL_INSTALL_DIR)/arch/arm/include \
+        -I$(OMX_INSTALL_DIR)/packages/ti/omx/interfaces/openMaxv11  \
+        -I$(OMX_INSTALL_DIR)/packages/ti/omx/comp/vfpc  \
+        -I$(OMX_INSTALL_DIR)/packages/ti/omx/comp/vfdc \
+        -I$(OMX_INSTALL_DIR)/packages/ti/omx/comp/ctrl
 
 libgstomx_la_LDFLAGS = $(GST_PLUGIN_LDFLAGS) -L../ext/lib -lOMX_Core -pthread 
-
-#libgstomx_la_LDFLAGS +=
-#	-Wl,$(OMX_INSTALL_DIR)/lib/omxcore.av5T \
-#	-Wl,$(OMX_INSTALL_DIR)/lib/domx.av5T \
-#	-Wl,$(OSAL_INSTALL_DIR)/packages/linuxdist/build/lib/osal.a \
-#	-Wl,$(SYSLINK_INSTALL_DIR)/ti/syslink/lib/syslink.a_release \
-#	-Wl,$(OMX_INSTALL_DIR)/rebuilt-binaries/ti/omx/omxutils/lib/a8host/debug/omxutils.av5T \
-#	-Wl,$(OMX_INSTALL_DIR)/rebuilt-binaries/ti/timmosal/lib/a8host/debug/timmosal.av5T \
-#	-Wl,$(FC_INSTALL_DIR)/packages/ti/sdo/rcm/lib/debug/rcm_syslink.av5T \
-#	-Wl,$(OMX_INSTALL_DIR)/rebuilt-binaries/ti/omx/domx/delegates/shmem/lib/a8host/debug/domx_delegates_shmem.av5T \
-#	-Wl,$(FC_INSTALL_DIR)/packages/ti/sdo/fc/memutils/lib/release/memutils.av5T \
-#	-Wl,$(OSAL_INSTALL_DIR)/packages/linuxdist/cstubs/lib/cstubs.a \
-#	-Wl,$(OMX_INSTALL_DIR)/rebuilt-binaries/ti/omx/domx/lib/a8host/debug/domx.av5T \
-#	-Wl,$(OMX_INSTALL_DIR)/rebuilt-binaries/vdec_snt/obj/ti816x-evm/a8host/debug/domx_delegates_shmem_cfg.ov5T \
-#	-Wl,$(FC_INSTALL_DIR)/packages/ti/sdo/fc/global/lib/debug/fcsettings.av5T \
-#	-Wl,$(LINUXUTILS_INSTALL_DIR)/packages/ti/sdo/linuxutils/cmem/lib/cmem.a470MV
 

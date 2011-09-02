@@ -1,9 +1,10 @@
 Prerequisites
 =============
-- The EZSDK 5_02_00_56 is installed on the Linux host. 
+- libOMX_Core for DM81xx needs to be installed first, since it provides libOMX_Core.so
+from the EZSDK components
 
-BUILDING
-========
+BUILDING ON THE EZSDK
+=====================
 
 1) Copy the libz.* libraries which is part of the linux devkit as follows -
    cd ti-ezsdk_dm814x-evm_5_02_00_56/linux-devkit/arm-none-linux-gnueabi/usr/lib

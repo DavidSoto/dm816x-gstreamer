@@ -358,15 +358,9 @@ create (GstBaseSrc * gst_base,
 {
   GstOmxCamera *self = GST_OMX_CAMERA (gst_base);
   GstOmxBaseSrc *omx_base = GST_OMX_BASE_SRC (self);
-  GstBuffer *vid_buf = NULL;
   GstFlowReturn ret = GST_FLOW_NOT_NEGOTIATED;
   GstClockTime timestamp;
-  gboolean pending_eos;
   guint n_offset = 0;
-  static guint cont;
-
-  pending_eos =
-      g_atomic_int_compare_and_exchange (&self->pending_eos, TRUE, FALSE);
 
   if (omx_base->gomx->omx_state == OMX_StateLoaded) {
     gst_omx_base_src_setup_ports (omx_base);
@@ -380,51 +374,26 @@ create (GstBaseSrc * gst_base,
   if (!self->alreadystarted) {
     self->alreadystarted = 1;
     start_ports (self);
+
+	if (self->ctrl_tvp)
+		OMX_SendCommand (self->tvp->omx_handle, OMX_CommandStateSet,
+			OMX_StateExecuting, NULL);
   }
 
-  if (self->ctrl_tvp)
-    OMX_SendCommand (self->tvp->omx_handle, OMX_CommandStateSet,
-        OMX_StateExecuting, NULL);
-
-  ret = gst_omx_base_src_create_from_port (omx_base, self->port, &vid_buf);
+  ret = gst_omx_base_src_create_from_port (omx_base, self->port, ret_buf);
 
   n_offset = self->port->n_offset;
 
   if (ret != GST_FLOW_OK)
     goto fail;
-  vid_buf = gst_buffer_ref (vid_buf);
 
-  timestamp = get_timestamp (self);
-  cont++;
-  GST_DEBUG (" ================ preview buffers cont = %d ================\n",
-      cont);
-
-  *ret_buf = vid_buf;
-
-  if (vid_buf) {
-    GST_BUFFER_TIMESTAMP (vid_buf) = timestamp;
-    gst_pad_push (GST_BASE_SRC_PAD(self), vid_buf);
-    if (G_UNLIKELY (pending_eos)) {
-      gst_pad_push_event (GST_BASE_SRC_PAD(self), gst_event_new_eos ());
-    }
-  }
-
-  if (G_UNLIKELY (pending_eos)) {
-    /* now send eos event, which was previously deferred, to parent
-     * class this will trigger basesrc's eos logic.  Unfortunately we
-     * can't call parent->send_event() directly from here to pass along
-     * the eos, which would be a more obvious approach, because that
-     * would deadlock when it tries to acquire live-lock.. but live-
-     * lock is already held when calling create().
-     */
-    return GST_FLOW_UNEXPECTED;
-  }
+  GST_BUFFER_TIMESTAMP (*ret_buf) = get_timestamp (self);
 
   return GST_FLOW_OK;
 
 fail:
-  if (vid_buf)
-    gst_buffer_unref (vid_buf);
+  if (*ret_buf)
+    gst_buffer_unref (*ret_buf);
   return ret;
 }
 

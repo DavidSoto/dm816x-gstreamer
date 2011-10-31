@@ -47,11 +47,7 @@ struct GstOmxCamera
     gint rowstride;     /**< rowstride of preview/video buffer */
 
     GOmxPort *port;
-
     gint alreadystarted;
-    
-    /* if EOS is pending (atomic) */
-    gint pending_eos;
 	
 	gboolean ctrl_tvp;
 	gint input_interface;

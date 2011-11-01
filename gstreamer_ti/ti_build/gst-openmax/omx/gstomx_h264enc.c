@@ -32,6 +32,9 @@ enum
     ARG_BYTESTREAM,
     ARG_PROFILE,
     ARG_LEVEL,
+    ARG_NPFRAMES,
+    ARG_IDR_PERIOD,
+    ARG_FORCE_IDR_PERIOD,
 };
 
 #define DEFAULT_BYTESTREAM FALSE
@@ -207,6 +210,59 @@ set_property (GObject *obj,
             g_assert (error_val == OMX_ErrorNone);
             break;
         }
+       case ARG_NPFRAMES:
+        {
+            OMX_VIDEO_CONFIG_AVCINTRAPERIOD avcIntraPeriod;
+            GOmxCore *gomx;
+            OMX_ERRORTYPE error_val = OMX_ErrorNone;
+
+            gomx = (GOmxCore *) omx_base->gomx;
+            _G_OMX_INIT_PARAM (&avcIntraPeriod);
+            avcIntraPeriod.nPortIndex = omx_base->out_port->port_index;
+            error_val = OMX_GetConfig (g_omx_core_get_handle (omx_base->gomx),
+                                          OMX_IndexConfigVideoAVCIntraPeriod,
+                                          (OMX_PTR)&avcIntraPeriod);
+            g_assert (error_val == OMX_ErrorNone);
+            avcIntraPeriod.nPFrames = g_value_get_uint (value);
+
+			if(value>0)
+			{
+            error_val = OMX_SetConfig (g_omx_core_get_handle (omx_base->gomx),
+                                          OMX_IndexConfigVideoAVCIntraPeriod,
+                                          &avcIntraPeriod);
+			}
+            g_assert (error_val == OMX_ErrorNone);
+            break;
+        }
+       case ARG_IDR_PERIOD:
+        {
+            OMX_VIDEO_CONFIG_AVCINTRAPERIOD avcIntraPeriod;
+            GOmxCore *gomx;
+            OMX_ERRORTYPE error_val = OMX_ErrorNone;
+
+            gomx = (GOmxCore *) omx_base->gomx;
+            _G_OMX_INIT_PARAM (&avcIntraPeriod);
+            avcIntraPeriod.nPortIndex = omx_base->out_port->port_index;
+            error_val = OMX_GetConfig (gomx->omx_handle,
+                                          OMX_IndexConfigVideoAVCIntraPeriod,
+                                          &avcIntraPeriod);
+            g_assert (error_val == OMX_ErrorNone);
+            avcIntraPeriod.nIDRPeriod = g_value_get_uint (value);
+
+			if(value>0)
+			{
+            error_val = OMX_SetConfig (gomx->omx_handle,
+                                          OMX_IndexConfigVideoAVCIntraPeriod,
+                                          &avcIntraPeriod);
+			}
+            g_assert (error_val == OMX_ErrorNone);
+            break;
+        }
+       case ARG_FORCE_IDR_PERIOD:
+        {
+            self->force_idr_period = g_value_get_uint (value);
+            break;
+        }
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
             break;
@@ -270,6 +326,42 @@ get_property (GObject *obj,
 
             break;
         }
+        case ARG_NPFRAMES:
+        {
+            OMX_VIDEO_CONFIG_AVCINTRAPERIOD avcIntraPeriod;
+            GOmxCore *gomx;
+            
+            gomx = (GOmxCore *) omx_base->gomx;
+            _G_OMX_INIT_PARAM (&avcIntraPeriod);
+            avcIntraPeriod.nPortIndex = omx_base->out_port->port_index;
+            OMX_GetConfig (gomx->omx_handle,
+                              OMX_IndexConfigVideoAVCIntraPeriod,
+                              &avcIntraPeriod);
+            g_value_set_uint (value, (gint)avcIntraPeriod.nPFrames);
+
+            break;
+        }
+        case ARG_IDR_PERIOD:
+        {
+            OMX_VIDEO_CONFIG_AVCINTRAPERIOD avcIntraPeriod;
+            GOmxCore *gomx;
+       
+            gomx = (GOmxCore *) omx_base->gomx;
+            _G_OMX_INIT_PARAM (&avcIntraPeriod);
+            avcIntraPeriod.nPortIndex = omx_base->out_port->port_index;
+            OMX_GetConfig (gomx->omx_handle,
+                              OMX_IndexConfigVideoAVCIntraPeriod,
+                              &avcIntraPeriod);
+            g_value_set_uint (value, (gint)avcIntraPeriod.nIDRPeriod);
+
+            break;
+        }
+        case ARG_FORCE_IDR_PERIOD:
+        {
+            g_value_set_uint (value, self->force_idr_period);
+            
+            break;
+        }
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
             break;
@@ -304,8 +396,53 @@ type_class_init (gpointer g_class,
                     GST_TYPE_OMX_VIDEO_AVCLEVELTYPE,
                     DEFAULT_LEVEL,
                     G_PARAM_READWRITE));
+	g_object_class_install_property (gobject_class, ARG_NPFRAMES,
+		    g_param_spec_uint ("p-frames", "Number of P frames between 2 I frames",
+                    "nPFrames is the number of P frames between 2 I frames (intraFrameInterval) (0:Disable)",
+                    0, 100, 0, G_PARAM_READWRITE));
+	g_object_class_install_property (gobject_class, ARG_IDR_PERIOD,
+		    g_param_spec_uint ("idr-period", "Specifies periodicity of IDR frames",
+                    "Specifies periodicity of IDR frames (0:Disable)",
+                    0, 100, 0, G_PARAM_READWRITE));
+	g_object_class_install_property (gobject_class, ARG_FORCE_IDR_PERIOD,
+		    g_param_spec_uint ("force-idr-period", "Specifies periodicity of IDR frames (FORCED)",
+                    "Forces periodicity of IDR frames (0:Disable)",
+                    0, 100, 0, G_PARAM_READWRITE));
 
     }
+}
+
+static void
+send_IDR (GstOmxBaseFilter *omx_base)
+{
+	static guint cont;
+	GstOmxH264Enc *self;
+	self = GST_OMX_H264ENC (omx_base);
+
+	if(self->force_idr_period > 0)
+	{
+		if(cont == self->force_idr_period)
+		{
+			OMX_CONFIG_INTRAREFRESHVOPTYPE confIntraRefreshVOP;
+      
+            _G_OMX_INIT_PARAM (&confIntraRefreshVOP);
+            confIntraRefreshVOP.nPortIndex = omx_base->out_port->port_index;
+
+			OMX_GetConfig (g_omx_core_get_handle (omx_base->gomx),
+                              OMX_IndexConfigVideoIntraVOPRefresh,
+                              &confIntraRefreshVOP);
+            confIntraRefreshVOP.IntraRefreshVOP = TRUE;
+
+			OMX_SetConfig (g_omx_core_get_handle (omx_base->gomx),
+                           OMX_IndexConfigVideoIntraVOPRefresh,
+                           &confIntraRefreshVOP);
+			
+			cont = 0;
+		}
+		else
+			cont++;
+	}
+
 }
 
 static void
@@ -384,13 +521,21 @@ type_instance_init (GTypeInstance *instance,
 {
     GstOmxBaseFilter *omx_base_filter;
     GstOmxBaseVideoEnc *omx_base;
+	GstOmxBaseFilterClass *bclass;
+	GstOmxH264Enc *self;
 
-    omx_base_filter = GST_OMX_BASE_FILTER (instance);
+	omx_base_filter = GST_OMX_BASE_FILTER (instance);
     omx_base = GST_OMX_BASE_VIDEOENC (instance);
-
-    omx_base->omx_setup = omx_setup;
+	self = GST_OMX_H264ENC (instance);
+    bclass = GST_OMX_BASE_FILTER_CLASS (g_class);
+	
+	omx_base->omx_setup = omx_setup;
+	
+	omx_base_filter->pushCb = send_IDR;
 
     omx_base->compression_format = OMX_VIDEO_CodingAVC;
 
     omx_base_filter->gomx->settings_changed_cb = settings_changed_cb;
+
+	self->force_idr_period = 0;
 }

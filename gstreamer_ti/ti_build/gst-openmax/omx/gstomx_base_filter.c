@@ -383,17 +383,19 @@ push_buffer (GstOmxBaseFilter *self,
              GstBuffer *buf)
 {
     GstFlowReturn ret;
-
     GST_BUFFER_DURATION (buf) = self->duration;
 	//printf("output!!\n");
 
     PRINT_BUFFER (self, buf);
-
+	if (self->pushCb)
+			self->pushCb (self);
+    
     /** @todo check if tainted */
     GST_LOG_OBJECT (self, "begin");
     ret = gst_pad_push (self->srcpad, buf);
     GST_LOG_OBJECT (self, "end");
 
+	
     return ret;
 }
 

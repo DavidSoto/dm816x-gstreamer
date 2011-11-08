@@ -39,6 +39,7 @@ struct GstOmxH264Enc
     GstOmxBaseVideoEnc omx_base;
     gboolean bytestream;
 	gint force_idr_period;
+	gint force_idr;
 };
 
 struct GstOmxH264EncClass

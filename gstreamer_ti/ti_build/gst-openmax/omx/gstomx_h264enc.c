@@ -38,6 +38,7 @@ enum
     ARG_NPFRAMES,
     ARG_IDR_PERIOD,
     ARG_FORCE_IDR_PERIOD,
+    ARG_FORCE_IDR,
 };
 
 #define DEFAULT_BYTESTREAM FALSE
@@ -266,6 +267,11 @@ set_property (GObject *obj,
             self->force_idr_period = g_value_get_uint (value);
             break;
         }
+       case ARG_FORCE_IDR:
+        {
+            self->force_idr = g_value_get_boolean (value);
+            break;
+        }
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
             break;
@@ -365,6 +371,12 @@ get_property (GObject *obj,
             
             break;
         }
+        case ARG_FORCE_IDR:
+        {
+            g_value_set_boolean (value, self->force_idr);
+            
+            break;
+        }
         default:
             G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
             break;
@@ -384,9 +396,9 @@ type_class_init (gpointer g_class,
         gobject_class->set_property = set_property;
         gobject_class->get_property = get_property;
 
-        g_object_class_install_property (gobject_class, ARG_BYTESTREAM,
-                                         g_param_spec_boolean ("bytestream", "BYTESTREAM", "bytestream",
-                                                               DEFAULT_BYTESTREAM, G_PARAM_READWRITE));
+    g_object_class_install_property (gobject_class, ARG_BYTESTREAM,
+            g_param_spec_boolean ("bytestream", "BYTESTREAM", "bytestream",
+                    DEFAULT_BYTESTREAM, G_PARAM_READWRITE));
 	g_object_class_install_property (gobject_class, ARG_PROFILE,
 		    g_param_spec_enum ("profile", "H.264 Profile",
                     "H.264 Profile",
@@ -411,6 +423,10 @@ type_class_init (gpointer g_class,
 		    g_param_spec_uint ("force-idr-period", "Specifies periodicity of IDR frames (FORCED)",
                     "Forces periodicity of IDR frames (0:Disable)",
                     0, 100, 0, G_PARAM_READWRITE));
+    g_object_class_install_property (gobject_class, ARG_FORCE_IDR,
+            g_param_spec_boolean ("force-idr", "force-idr", "force next frame to be IDR",
+                    FALSE, G_PARAM_WRITABLE));
+
 
     }
 }
@@ -422,9 +438,9 @@ send_IDR (GstOmxBaseFilter *omx_base)
 	GstOmxH264Enc *self;
 	self = GST_OMX_H264ENC (omx_base);
 
-	if(self->force_idr_period > 0)
+	if ((self->force_idr_period > 0) || (self->force_idr))
 	{
-		if(cont == self->force_idr_period)
+		if ((cont == self->force_idr_period) || (self->force_idr))
 		{
 			OMX_CONFIG_INTRAREFRESHVOPTYPE confIntraRefreshVOP;
       
@@ -440,7 +456,14 @@ send_IDR (GstOmxBaseFilter *omx_base)
                            OMX_IndexConfigVideoIntraVOPRefresh,
                            &confIntraRefreshVOP);
 			
-			cont = 0;
+			if (cont == self->force_idr_period)
+				cont = 0;
+				
+		    if (self->force_idr)
+		    {
+				self->force_idr=FALSE;
+				cont++;
+			}
 		}
 		else
 			cont++;
@@ -541,4 +564,5 @@ type_instance_init (GTypeInstance *instance,
     omx_base_filter->gomx->settings_changed_cb = settings_changed_cb;
 
 	self->force_idr_period = 0;
+	self->force_idr = FALSE;
 }

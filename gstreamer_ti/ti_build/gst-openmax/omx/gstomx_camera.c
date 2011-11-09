@@ -58,7 +58,6 @@ GST_ELEMENT_DETAILS ("Video OMX Camera Source",
 enum
 {
   ARG_0,
-  ARG_CTRL_TVP,
   ARG_INPUT_INTERFACE,
   ARG_CAP_MODE,
   ARG_SCAN_TYPE,
@@ -215,75 +214,6 @@ src_setcaps (GstPad * pad, GstCaps * caps)
           (OMX_PTR) & sCapSkipFrames);
     }
 
-    if (self->ctrl_tvp) {
-      /*Creating TVP component */
-      gchar *library_name = NULL, *component_name = NULL, *component_role =
-          NULL;
-
-      /*We need to create a backup of the current component-role,
-       * component-name and library name*/
-      g_object_get (omx_base->gomx->object, "component-role",
-          &component_role, "component-name",
-          &component_name, "library-name", &library_name, NULL);
-
-      /*Set the name of the TVP Component, changing these properties we
-       * are changing at the same time the properties of the camera object
-       *since the tvp object is pointed to the camera object.
-       *We just need to change them to request a tvp object using
-       *available functions in omx_core, later we are going to restore it */
-      g_object_set (self->tvp->object, "component-role", NULL,
-          "component-name", "OMX.TI.VPSSM3.CTRL.TVP",
-          "library-name", "libOMX_Core.so", NULL);
-
-      /*Create TVP Component */
-      g_omx_core_get_handle (self->tvp);
-
-      self->tvp->imp->client_count--;
-      /*Restore original values */
-      g_object_set (omx_base->gomx->object, "component-role", NULL,
-          "component-name", component_name, "library-name", library_name, NULL);
-
-      /* Set parameters for TVP controller */
-      _G_OMX_INIT_PARAM (&sHwPortId);
-
-      /* capture on EIO card is component input at VIP1 port */
-      sHwPortId.eHwPortId = self->input_interface;
-      OMX_SetParameter (g_omx_core_get_handle (self->tvp),
-          (OMX_INDEXTYPE) OMX_TI_IndexParamVFCCHwPortID, (OMX_PTR) & sHwPortId);
-
-      _G_OMX_INIT_PARAM (&sHwPortParam);
-      sHwPortParam.eCaptMode = self->cap_mode;
-      sHwPortParam.eVifMode = OMX_VIDEO_CaptureVifMode_16BIT;
-      sHwPortParam.eInColorFormat = self->input_format;
-      sHwPortParam.eScanType = self->scan_type;
-      sHwPortParam.nMaxHeight = height;
-      sHwPortParam.nMaxWidth = width;
-      sHwPortParam.nMaxChnlsPerHwPort = 1;
-
-      OMX_SetParameter (g_omx_core_get_handle (self->tvp),
-          (OMX_INDEXTYPE) OMX_TI_IndexParamVFCCHwPortProperties,
-          (OMX_PTR) & sHwPortParam);
-
-      /* set the mode based on capture/display device */
-      OMX_PARAM_CTRL_VIDDECODER_INFO sVidDecParam;
-      _G_OMX_INIT_PARAM (&sVidDecParam);
-      if (self->scan_type == OMX_VIDEO_CaptureScanTypeProgressive) {
-        if (height == 720)
-          sVidDecParam.videoStandard = OMX_VIDEO_DECODER_STD_720P_60;
-        else
-          sVidDecParam.videoStandard = OMX_VIDEO_DECODER_STD_1080P_60;
-      } else
-        sVidDecParam.videoStandard = OMX_VIDEO_DECODER_STD_1080I_60;
-
-
-      /* setting TVP7002 component input */
-      sVidDecParam.videoDecoderId = OMX_VID_DEC_TVP7002_DRV;
-      sVidDecParam.videoSystemId = OMX_VIDEO_DECODER_VIDEO_SYSTEM_AUTO_DETECT;
-      OMX_SetParameter (g_omx_core_get_handle (self->tvp),
-          (OMX_INDEXTYPE) OMX_TI_IndexParamCTRLVidDecInfo,
-          (OMX_PTR) & sVidDecParam);
-    }
-
     if (!gst_pad_set_caps (GST_BASE_SRC_PAD(self), caps))
       return FALSE;
   }
@@ -364,20 +294,12 @@ create (GstBaseSrc * gst_base,
 
   if (omx_base->gomx->omx_state == OMX_StateLoaded) {
     gst_omx_base_src_setup_ports (omx_base);
-
-    if (self->ctrl_tvp)
-      g_omx_core_prepare (self->tvp);
-
     g_omx_core_prepare (omx_base->gomx);
   }
 
   if (!self->alreadystarted) {
     self->alreadystarted = 1;
     start_ports (self);
-
-	if (self->ctrl_tvp)
-		OMX_SendCommand (self->tvp->omx_handle, OMX_CommandStateSet,
-			OMX_StateExecuting, NULL);
   }
 
   ret = gst_omx_base_src_create_from_port (omx_base, self->port, ret_buf);
@@ -424,11 +346,6 @@ set_property (GObject * obj,
 
       G_OMX_PORT_SET_DEFINITION (port, &param);
 
-      break;
-    }
-    case ARG_CTRL_TVP:
-    {
-      self->ctrl_tvp = g_value_get_boolean (value);
       break;
     }
     case ARG_INPUT_INTERFACE:
@@ -495,11 +412,6 @@ get_property (GObject * obj, guint prop_id, GValue * value, GParamSpec * pspec)
       G_OMX_PORT_GET_DEFINITION (port, &param);
       g_value_set_uint (value, param.nBufferCountActual);
 
-      break;
-    }
-    case ARG_CTRL_TVP:
-    {
-      g_value_set_boolean (value, self->ctrl_tvp);
       break;
     }
     case ARG_INPUT_INTERFACE:
@@ -586,12 +498,7 @@ type_class_init (gpointer g_class, gpointer class_data)
       g_param_spec_uint ("video-output-buffers", "Video port output buffers",
           "The number of OMX video port output buffers",
           1, 10, 4, G_PARAM_READWRITE));
-
-  g_object_class_install_property (gobject_class, ARG_CTRL_TVP,
-      g_param_spec_boolean ("control-tvp", "Enable and configure TVP component",
-          "Create, enable and configure the TVP omx component",
-          TRUE, G_PARAM_READWRITE));
-
+		  
   g_object_class_install_property (gobject_class, ARG_INPUT_INTERFACE,
       g_param_spec_string ("input-interface", "Video input interface",
           "The video input interface from where capture image/video is obtained (see below)"
@@ -631,8 +538,6 @@ type_instance_init (GTypeInstance * instance, gpointer g_class)
   self->port = g_omx_core_get_port (omx_base->gomx, "out",
       OMX_CAMERA_PORT_VIDEO_OUT_VIDEO);
 
-  self->tvp = g_omx_core_new (self, g_class);
-
   gst_base_src_set_live (basesrc, TRUE);
 
   /* setup src pad (already created by basesrc): */
@@ -640,7 +545,6 @@ type_instance_init (GTypeInstance * instance, gpointer g_class)
       GST_DEBUG_FUNCPTR (src_setcaps));
 
   /*Initialize properties */
-  self->ctrl_tvp = TRUE;
   self->input_interface = OMX_VIDEO_CaptureHWPortVIP1_PORTA;
   self->cap_mode = OMX_VIDEO_CaptureModeSC_NON_MUX;
   self->scan_type = OMX_VIDEO_CaptureScanTypeProgressive;

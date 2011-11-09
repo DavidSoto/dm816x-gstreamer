@@ -48,8 +48,7 @@ struct GstOmxCamera
 
     GOmxPort *port;
     gint alreadystarted;
-	
-	gboolean ctrl_tvp;
+
 	gint input_interface;
 	gint cap_mode;
 	gint input_format;

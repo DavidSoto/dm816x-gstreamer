@@ -414,15 +414,15 @@ type_class_init (gpointer g_class,
 	g_object_class_install_property (gobject_class, ARG_NPFRAMES,
 		    g_param_spec_uint ("p-frames", "Number of P frames between 2 I frames",
                     "nPFrames is the number of P frames between 2 I frames (intraFrameInterval) (0:Disable)",
-                    0, 100, 0, G_PARAM_READWRITE));
+                    0, G_MAXINT32, 0, G_PARAM_READWRITE));
 	g_object_class_install_property (gobject_class, ARG_IDR_PERIOD,
 		    g_param_spec_uint ("idr-period", "Specifies periodicity of IDR frames",
                     "Specifies periodicity of IDR frames (0:Disable)",
-                    0, 100, 0, G_PARAM_READWRITE));
+                    0, G_MAXINT32, 0, G_PARAM_READWRITE));
 	g_object_class_install_property (gobject_class, ARG_FORCE_IDR_PERIOD,
 		    g_param_spec_uint ("force-idr-period", "Specifies periodicity of IDR frames (FORCED)",
                     "Forces periodicity of IDR frames (0:Disable)",
-                    0, 100, 0, G_PARAM_READWRITE));
+                    0, G_MAXINT32, 0, G_PARAM_READWRITE));
     g_object_class_install_property (gobject_class, ARG_FORCE_IDR,
             g_param_spec_boolean ("force-idr", "force-idr", "force next frame to be IDR",
                     FALSE, G_PARAM_WRITABLE));

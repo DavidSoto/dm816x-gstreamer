@@ -217,8 +217,9 @@ set_property (GObject * obj,
     guint prop_id, const GValue * value, GParamSpec * pspec)
 {
   GstOmxBaseTvp *self;
-
   self = GST_OMX_TVP (obj);
+  gchar *str_value;
+  g_free (str_value);
 
   switch (prop_id) {
     case ARG_COMPONENT_ROLE:
@@ -234,23 +235,45 @@ set_property (GObject * obj,
       self->omx_library = g_value_dup_string (value);
       break;
     case ARG_INPUT_INTERFACE:
-      if (self->input_interface == OMX_VIDEO_CaptureHWPortVIP2_PORTA)
-        g_value_set_string (value, "VIP2_PORTA");
-      else
-        g_value_set_string (value, "VIP1_PORTA");
+    {
+      str_value = g_value_dup_string (value);
+      if (!strcmp (str_value, "VIP1_PORTA")) {
+        self->input_interface = OMX_VIDEO_CaptureHWPortVIP1_PORTA;
+      } else if (!strcmp (str_value, "VIP2_PORTA")) {
+        self->input_interface = OMX_VIDEO_CaptureHWPortVIP2_PORTA;
+      } else {
+        GST_WARNING_OBJECT (self, "%s unsupported", str_value);
+        g_return_if_fail (0);
+      }
       break;
+    }
     case ARG_CAP_MODE:
-      if (self->cap_mode == OMX_VIDEO_CaptureModeMC_LINE_MUX)
-        g_value_set_string (value, "MC_LINE_MUX");
-      else
-        g_value_set_string (value, "SC_NON_MUX");
+    {
+      str_value = g_value_dup_string (value);
+      if (!strcmp (str_value, "MC_LINE_MUX")) {
+        self->cap_mode = OMX_VIDEO_CaptureModeMC_LINE_MUX;
+      } else if (!strcmp (str_value, "SC_NON_MUX")) {
+        self->cap_mode = OMX_VIDEO_CaptureModeSC_NON_MUX;
+      } else {
+        GST_WARNING_OBJECT (self, "%s unsupported", str_value);
+        g_return_if_fail (0);
+      }
       break;
+    }
     case ARG_SCAN_TYPE:
-      if (self->scan_type == OMX_VIDEO_CaptureScanTypeProgressive)
-        g_value_set_string (value, "progressive");
-      else
-        g_value_set_string (value, "interlaced");
+    {
+      str_value = g_value_dup_string (value);
+      if (!strcmp (str_value, "progressive")) {
+        self->scan_type = OMX_VIDEO_CaptureScanTypeProgressive;
+      } else if (!strcmp (str_value, "interlaced")) {
+        self->scan_type = OMX_VIDEO_CaptureScanTypeInterlaced;
+      } else {
+        GST_WARNING_OBJECT (self, "%s unsupported", str_value);
+        g_return_if_fail (0);
+      }
       break;
+    }
+
     default:
       G_OBJECT_WARN_INVALID_PROPERTY_ID (obj, prop_id, pspec);
       break;

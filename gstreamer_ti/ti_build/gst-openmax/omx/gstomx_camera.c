@@ -86,8 +86,6 @@ src_setcaps (GstPad * pad, GstCaps * caps)
 
   GstVideoFormat format;
   gint width, height, rowstride;
-  gint framerate_num, framerate_denom;
-  const GValue *framerate = NULL;
   OMX_ERRORTYPE err;
   GstStructure *structure;
 
@@ -138,9 +136,6 @@ src_setcaps (GstPad * pad, GstCaps * caps)
       }
     }
 
-    framerate =
-        gst_structure_get_value (gst_caps_get_structure (caps, 0), "framerate");
-
     /*Setting compression Format */
     param.format.video.eCompressionFormat = OMX_VIDEO_CodingUnused;
 
@@ -160,13 +155,6 @@ src_setcaps (GstPad * pad, GstCaps * caps)
       if (port_enabled)
         g_omx_port_enable (self->port);
     }
-
-    GST_INFO_OBJECT (omx_base,
-        " Rowstride=%d, Width=%d, Height=%d, Color=%d, Buffersize=%d, framerate=%d",
-        param.format.video.nStride, param.format.video.nFrameWidth,
-        param.format.video.nFrameHeight, param.format.video.eColorFormat,
-        param.nBufferSize, param.format.video.xFramerate);
-
 
     /* Setting Memory type at output port to Raw Memory */
     OMX_PARAM_BUFFER_MEMORYTYPE memTypeCfg;
@@ -203,16 +191,6 @@ src_setcaps (GstPad * pad, GstCaps * caps)
     G_OMX_PORT_SET_PARAM (self->port,
         (OMX_INDEXTYPE) OMX_TI_IndexParamVFCCHwPortProperties,
         (OMX_PTR) & sHwPortParam);
-
-    if (framerate_num == 30) {
-      OMX_CONFIG_VFCC_FRAMESKIP_INFO sCapSkipFrames;
-      _G_OMX_INIT_PARAM (&sCapSkipFrames);
-
-      sCapSkipFrames.frameSkipMask = 0x2AAAAAAA;
-      G_OMX_PORT_SET_PARAM (self->port,
-          (OMX_INDEXTYPE) OMX_TI_IndexConfigVFCCFrameSkip,
-          (OMX_PTR) & sCapSkipFrames);
-    }
 
     if (!gst_pad_set_caps (GST_BASE_SRC_PAD(self), caps))
       return FALSE;
@@ -289,7 +267,6 @@ create (GstBaseSrc * gst_base,
   GstOmxCamera *self = GST_OMX_CAMERA (gst_base);
   GstOmxBaseSrc *omx_base = GST_OMX_BASE_SRC (self);
   GstFlowReturn ret = GST_FLOW_NOT_NEGOTIATED;
-  GstClockTime timestamp;
   guint n_offset = 0;
 
   if (omx_base->gomx->omx_state == OMX_StateLoaded) {
@@ -400,7 +377,6 @@ static void
 get_property (GObject * obj, guint prop_id, GValue * value, GParamSpec * pspec)
 {
   GstOmxCamera *self = GST_OMX_CAMERA (obj);
-  GstOmxBaseSrc *omx_base = GST_OMX_BASE_SRC (self);
 
   switch (prop_id) {
     case ARG_NUM_IMAGE_OUTPUT_BUFFERS:
@@ -525,7 +501,6 @@ type_instance_init (GTypeInstance * instance, gpointer g_class)
   GstOmxCamera *self = GST_OMX_CAMERA (instance);
   GstOmxBaseSrc *omx_base = GST_OMX_BASE_SRC (self);
   GstBaseSrc *basesrc = GST_BASE_SRC (self);
-  GstPadTemplate *pad_template;
 
   self->alreadystarted = 0;
 

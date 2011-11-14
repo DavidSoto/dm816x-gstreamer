@@ -83,9 +83,6 @@ tvp_setcaps (GstBaseTransform * trans, GstCaps * incaps, GstCaps * outcaps)
   GstOmxBaseTvp *self;
 
   self = GST_OMX_TVP (trans);
-
-  GstVideoFormat format;
-  gint width, height, rowstride;
   GstStructure *structure;
 
   if (gst_video_format_parse_caps_strided (incaps,
@@ -107,7 +104,6 @@ tvp_setcaps (GstBaseTransform * trans, GstCaps * incaps, GstCaps * outcaps)
 static gboolean
 gst_omx_configure_tvp (GstOmxBaseTvp * self)
 {
-  OMX_PARAM_VFDC_DRIVERINSTID driverId;
   OMX_ERRORTYPE err;
   GOmxCore *gomx;
 

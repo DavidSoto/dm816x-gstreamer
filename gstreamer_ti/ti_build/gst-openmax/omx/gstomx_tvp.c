@@ -77,20 +77,31 @@ type_base_init (gpointer g_class)
   }
 }
 
-static gboolean tvp_setcaps (GstBaseTransform *trans, GstCaps *incaps, GstCaps *outcaps)
+static gboolean
+tvp_setcaps (GstBaseTransform * trans, GstCaps * incaps, GstCaps * outcaps)
 {
-	GstOmxBaseTvp *self;
+  GstOmxBaseTvp *self;
 
-    self = GST_OMX_TVP (trans);
-    
-	GstVideoFormat format;
-	gint width, height, rowstride;
-	
-	if (gst_video_format_parse_caps_strided (incaps,
-          &self->format, &self->width, &self->height, &self->rowstride))
-          return TRUE;
-	
-    return FALSE;	
+  self = GST_OMX_TVP (trans);
+
+  GstVideoFormat format;
+  gint width, height, rowstride;
+  GstStructure *structure;
+
+  if (gst_video_format_parse_caps_strided (incaps,
+          &self->format, &self->width, &self->height, &self->rowstride)) {
+
+    structure = gst_caps_get_structure (incaps, 0);
+    if (!strcmp (gst_structure_get_name (structure), "video/x-raw-yuv")) {
+      self->input_format = OMX_COLOR_FormatYCbYCr;
+    } else if (!strcmp (gst_structure_get_name (structure), "video/x-raw-rgb")) {
+      self->input_format = OMX_COLOR_Format24bitRGB888;
+    } else
+      return FALSE;
+    return TRUE;
+  }
+
+  return FALSE;
 }
 
 static gboolean
@@ -101,36 +112,36 @@ gst_omx_configure_tvp (GstOmxBaseTvp * self)
   GOmxCore *gomx;
 
   gomx = (GOmxCore *) self->gomx;
-  
+
   /* Set parameters for TVP controller */
   OMX_PARAM_VFCC_HWPORT_ID sHwPortId;
   _G_OMX_INIT_PARAM (&sHwPortId);
 
-  /* capture on EIO card*/
+  /* capture on EIO card */
   sHwPortId.eHwPortId = self->input_interface;
   err = OMX_SetParameter (g_omx_core_get_handle (gomx),
       (OMX_INDEXTYPE) OMX_TI_IndexParamVFCCHwPortID, (OMX_PTR) & sHwPortId);
-  
+
   if (err != OMX_ErrorNone)
     return FALSE;
-    
+
   OMX_PARAM_VFCC_HWPORT_PROPERTIES sHwPortParam;
   _G_OMX_INIT_PARAM (&sHwPortParam);
   sHwPortParam.eCaptMode = self->cap_mode;
   sHwPortParam.eVifMode = OMX_VIDEO_CaptureVifMode_16BIT;
-  sHwPortParam.eInColorFormat = OMX_COLOR_FormatYCbYCr; //TODO
+  sHwPortParam.eInColorFormat = self->input_format; 
   sHwPortParam.eScanType = self->scan_type;
-  sHwPortParam.nMaxHeight = self->height;     
-  sHwPortParam.nMaxWidth = self->width;       
+  sHwPortParam.nMaxHeight = self->height;
+  sHwPortParam.nMaxWidth = self->width;
   sHwPortParam.nMaxChnlsPerHwPort = 1;
 
   err = OMX_SetParameter (g_omx_core_get_handle (gomx),
       (OMX_INDEXTYPE) OMX_TI_IndexParamVFCCHwPortProperties,
       (OMX_PTR) & sHwPortParam);
-	  
+
   if (err != OMX_ErrorNone)
     return FALSE;
-  
+
   /* set the mode based on capture/display device */
   OMX_PARAM_CTRL_VIDDECODER_INFO sVidDecParam;
   _G_OMX_INIT_PARAM (&sVidDecParam);

@@ -56,7 +56,7 @@ struct GstOmxBaseFilter
     GMutex *ready_lock;
 
     GstOmxBaseFilterCb omx_setup;
-    GstOmxBaseFilterCb pushCb;
+    GstOmxBaseFilterCb push_cb;
     GstFlowReturn last_pad_push_return;
     GstBuffer *codec_data;
     GstClockTime duration;

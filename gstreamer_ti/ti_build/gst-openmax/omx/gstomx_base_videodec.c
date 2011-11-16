@@ -155,11 +155,11 @@ sink_setcaps (GstPad *pad,
             self->framerate_denom = gst_value_get_fraction_denominator (framerate);
         }
         else
-		{
-			self->framerate_num = 60;
-            self->framerate_denom = 1;
-				
-		}
+        {
+           self->framerate_num = 60;
+           self->framerate_denom = 1;
+
+        }
 
         omx_base->duration = gst_util_uint64_scale_int(GST_SECOND,
                 self->framerate_denom,

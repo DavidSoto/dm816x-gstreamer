@@ -390,9 +390,9 @@ push_buffer (GstOmxBaseFilter *self,
 	//printf("output!!\n");
 
     PRINT_BUFFER (self, buf);
-	if (self->pushCb)
-			self->pushCb (self);
-    
+    if (self->push_cb)
+        self->push_cb (self);
+
     /** @todo check if tainted */
     GST_LOG_OBJECT (self, "begin");
     ret = gst_pad_push (self->srcpad, buf);
